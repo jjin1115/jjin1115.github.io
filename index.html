@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>시간표</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; min-height: 100vh; }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white; padding: 16px 24px;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    }
+    header h1 { font-size: 20px; font-weight: 700; white-space: nowrap; }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    .btn-header {
+      padding: 8px 16px; background: rgba(255,255,255,0.18);
+      border: 1.5px solid rgba(255,255,255,0.45); border-radius: 8px;
+      color: white; font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: background 0.2s; white-space: nowrap;
+    }
+    .btn-header:hover { background: rgba(255,255,255,0.32); }
+    .view-toggle { display: flex; background: rgba(255,255,255,0.2); border-radius: 8px; padding: 4px; gap: 4px; }
+    .view-btn { padding: 7px 16px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; background: transparent; color: rgba(255,255,255,0.75); transition: all 0.2s; }
+    .view-btn.active { background: white; color: #667eea; }
+
+    /* ── Layout ── */
+    .container { display: flex; gap: 20px; padding: 20px; max-width: 1400px; margin: 0 auto; }
+
+    /* ── Sidebar ── */
+    .sidebar { width: 200px; flex-shrink: 0; }
+    .sidebar-card { background: white; border-radius: 14px; padding: 18px; box-shadow: 0 2px 10px rgba(0,0,0,0.07); position: sticky; top: 20px; }
+    .sidebar-section-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .section-label { font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 1.2px; }
+    .btn-icon-round { width: 24px; height: 24px; border-radius: 6px; border: none; background: #667eea; color: white; font-size: 16px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; flex-shrink: 0; }
+    .btn-icon-round:hover { background: #5568d6; }
+
+    .person-item { display: flex; align-items: center; gap: 6px; padding: 7px 8px; border-radius: 9px; margin-bottom: 4px; }
+    .person-item:hover { background: #f5f7fa; }
+    .person-item:hover .person-actions { opacity: 1; }
+    .person-item.inactive { opacity: 0.38; }
+    .person-toggle { display: flex; align-items: center; gap: 8px; flex: 1; cursor: pointer; min-width: 0; }
+    .person-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+    .person-name { font-size: 13px; font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .person-check { font-size: 12px; color: #667eea; flex-shrink: 0; transition: opacity 0.15s; }
+    .person-item.inactive .person-check { opacity: 0; }
+    .person-actions { display: flex; gap: 2px; opacity: 0; transition: opacity 0.15s; flex-shrink: 0; }
+    .mini-btn { width: 22px; height: 22px; border: none; background: none; cursor: pointer; border-radius: 5px; font-size: 12px; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
+    .mini-btn:hover { background: #eee; }
+    .mini-btn.del:hover { background: #fee2e2; }
+
+    .sidebar-divider { border: none; border-top: 1px solid #eee; margin: 12px 0; }
+    .btn-toggle-all { width: 100%; padding: 9px; border: 1.5px solid #667eea; border-radius: 8px; background: white; color: #667eea; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn-toggle-all:hover { background: #667eea; color: white; }
+
+    /* ── Timetable ── */
+    .timetable-card { flex: 1; background: white; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.07); overflow: hidden; min-width: 0; }
+    .tt-header { display: grid; grid-template-columns: 56px repeat(5, 1fr); border-bottom: 2px solid #f0f0f0; background: #fafbff; }
+    .th-cell { padding: 14px 8px; text-align: center; font-size: 14px; font-weight: 700; color: #667eea; }
+    .th-cell:first-child { color: #bbb; font-size: 11px; }
+    .tt-body { display: grid; grid-template-columns: 56px repeat(5, 1fr); }
+    .time-col { display: flex; flex-direction: column; }
+    .time-label { height: 80px; display: flex; align-items: flex-start; justify-content: center; padding-top: 6px; font-size: 11px; color: #ccc; border-top: 1px solid #f3f3f3; }
+    .day-col { position: relative; border-left: 1px solid #f3f3f3; cursor: pointer; transition: background 0.15s; }
+    .day-col:hover { background: #fafbff; }
+    .h-line  { position: absolute; left:0; right:0; border-top: 1px solid #f0f0f0; pointer-events: none; }
+    .hh-line { position: absolute; left:0; right:0; border-top: 1px dashed #f7f7f7;  pointer-events: none; }
+
+    .ev-block {
+      position: absolute; border-radius: 8px; padding: 5px 7px;
+      color: white; overflow: hidden; cursor: pointer;
+      transition: filter 0.12s, transform 0.12s;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+    .ev-block:hover { filter: brightness(1.12); transform: scale(1.025); z-index: 10; }
+    .ev-subject { font-size: 12px; font-weight: 700; }
+    .ev-person  { font-size: 11px; opacity: 0.85; margin-top: 1px; }
+    .ev-time    { font-size: 10px; opacity: 0.72; margin-top: 1px; }
+
+    /* ── Individual mode ── */
+    .individual-grid { flex: 1; display: flex; flex-direction: column; gap: 20px; }
+    .individual-card { background: white; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.07); overflow: hidden; }
+    .individual-header { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 2px solid #f0f0f0; background: #fafbff; }
+    .individual-dot  { width: 14px; height: 14px; border-radius: 4px; }
+    .individual-name { font-size: 15px; font-weight: 700; }
+    .empty-msg { padding: 60px 20px; text-align: center; color: #ccc; font-size: 15px; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000; backdrop-filter: blur(3px);
+    }
+    .modal-overlay.hidden { display: none; }
+    .modal {
+      background: white; border-radius: 16px; padding: 26px 28px;
+      width: 390px; max-width: 95vw;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.22);
+      animation: popIn 0.18s ease;
+    }
+    @keyframes popIn { from { opacity:0; transform:scale(0.94) translateY(10px); } to { opacity:1; transform:scale(1) translateY(0); } }
+    .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .modal-title { font-size: 17px; font-weight: 700; }
+    .modal-x { width: 30px; height: 30px; border: none; background: #f0f0f0; border-radius: 50%; cursor: pointer; font-size: 14px; transition: background 0.15s; }
+    .modal-x:hover { background: #e0e0e0; }
+
+    .form-group { margin-bottom: 15px; }
+    .form-label { display: block; font-size: 11px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 7px; }
+    .form-input { width: 100%; padding: 10px 12px; border: 1.5px solid #e5e7eb; border-radius: 9px; font-size: 14px; outline: none; transition: border-color 0.2s; background: white; }
+    .form-input:focus { border-color: #667eea; }
+    .form-select { cursor: pointer; padding-right: 28px; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24'%3E%3Cpath fill='%23aaa' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+
+    .palette { display: flex; flex-wrap: wrap; gap: 8px; }
+    .swatch { width: 32px; height: 32px; border-radius: 8px; cursor: pointer; border: 3px solid transparent; transition: transform 0.15s, border-color 0.15s; }
+    .swatch:hover { transform: scale(1.15); }
+    .swatch.on { border-color: #222; transform: scale(1.1); box-shadow: 0 0 0 2px white inset; }
+
+    .day-chips { display: flex; gap: 6px; }
+    .day-chip { flex: 1; padding: 9px 4px; text-align: center; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; color: #777; }
+    .day-chip.on { background: #667eea; border-color: #667eea; color: white; }
+    .day-chip:hover:not(.on) { border-color: #667eea; color: #667eea; }
+
+    .time-row { display: grid; grid-template-columns: 1fr 24px 1fr; align-items: center; gap: 8px; }
+    .time-sep { text-align: center; color: #bbb; font-size: 16px; }
+
+    .modal-footer { display: flex; gap: 8px; margin-top: 22px; }
+    .btn { flex: 1; padding: 11px; border-radius: 9px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; }
+    .btn-cancel { background: #f3f4f6; color: #666; }
+    .btn-cancel:hover { background: #e5e7eb; }
+    .btn-save { background: #667eea; color: white; }
+    .btn-save:hover { background: #5568d6; }
+    .btn-del { background: #fee2e2; color: #ef4444; flex: 0.65; }
+    .btn-del:hover { background: #fecaca; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>📅 시간표</h1>
+  <div class="header-right">
+    <button class="btn-header" onclick="openEventModal(null)">+ 항목 추가</button>
+    <div class="view-toggle">
+      <button class="view-btn active" onclick="setMode('overlay', this)">겹쳐 보기</button>
+      <button class="view-btn" onclick="setMode('individual', this)">개별 보기</button>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <aside class="sidebar">
+    <div class="sidebar-card">
+      <div class="sidebar-section-title">
+        <span class="section-label">구성원</span>
+        <button class="btn-icon-round" onclick="openPersonModal(null)" title="구성원 추가">+</button>
+      </div>
+      <div id="person-list"></div>
+      <hr class="sidebar-divider">
+      <button class="btn-toggle-all" onclick="toggleAll()">전체 선택 / 해제</button>
+    </div>
+  </aside>
+  <main id="main"></main>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay hidden" id="overlay" onclick="onOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title" id="m-title"></span>
+      <button class="modal-x" onclick="closeModal()">✕</button>
+    </div>
+    <div id="m-body"></div>
+  </div>
+</div>
+
+<script>
+/* ───── Constants ───── */
+const HOUR_H     = 80;
+const START_H    = 9;
+const END_H      = 18;
+const TOTAL_H    = END_H - START_H;
+const DAYS       = ['월','화','수','목','금'];
+const COLORS     = [
+  '#FF6B6B','#FF8E53','#F9CA24','#6AB04C',
+  '#3ECFCF','#4DA6FF','#667EEA','#A78BFA',
+  '#F472B6','#10B981','#F59E0B','#64748B',
+];
+
+/* ───── Data ───── */
+let pid = 4, eid = 16;
+
+let people = [
+  { id:1, name:'홍길동', color:'#FF6B6B', active:true },
+  { id:2, name:'김철수', color:'#3ECFCF', active:true },
+  { id:3, name:'이영희', color:'#A78BFA', active:true },
+];
+
+let events = [
+  { id:1,  pid:1, day:0, s:9,  e:11, sub:'수학개론'   },
+  { id:2,  pid:1, day:1, s:13, e:15, sub:'영어회화'   },
+  { id:3,  pid:1, day:2, s:9,  e:11, sub:'물리학'     },
+  { id:4,  pid:1, day:3, s:14, e:16, sub:'컴퓨터과학' },
+  { id:5,  pid:1, day:4, s:10, e:12, sub:'화학'       },
+  { id:6,  pid:2, day:0, s:9,  e:11, sub:'수학개론'   },
+  { id:7,  pid:2, day:1, s:10, e:12, sub:'역사'       },
+  { id:8,  pid:2, day:2, s:13, e:15, sub:'영어회화'   },
+  { id:9,  pid:2, day:3, s:9,  e:11, sub:'생물학'     },
+  { id:10, pid:2, day:4, s:13, e:15, sub:'컴퓨터과학' },
+  { id:11, pid:3, day:0, s:13, e:15, sub:'국어문학'   },
+  { id:12, pid:3, day:1, s:9,  e:11, sub:'수학개론'   },
+  { id:13, pid:3, day:2, s:9,  e:11, sub:'물리학'     },
+  { id:14, pid:3, day:3, s:10, e:12, sub:'화학'       },
+  { id:15, pid:3, day:4, s:9,  e:11, sub:'영어회화'   },
+];
+
+let mode = 'overlay';
+
+/* ───── Helpers ───── */
+function person(id) { return people.find(p => p.id === id); }
+function evById(id) { return events.find(e => e.id === id); }
+
+function fmt(h) {
+  return `${String(Math.floor(h)).padStart(2,'0')}:${h % 1 ? '30' : '00'}`;
+}
+
+function timeOpts(from, to, sel) {
+  let html = '';
+  for (let v = from * 2; v <= to * 2; v++) {
+    const val  = v / 2;
+    const hour = Math.floor(val);
+    const min  = v % 2 ? '30' : '00';
+    html += `<option value="${val}"${val === sel ? ' selected' : ''}>${String(hour).padStart(2,'0')}:${min}</option>`;
+  }
+  return html;
+}
+
+/* ───── Layout (greedy column assignment) ───── */
+function layout(evs) {
+  if (!evs.length) return evs;
+  evs.sort((a, b) => a.s - b.s);
+  const cols = [];
+  evs.forEach(ev => {
+    let placed = false;
+    for (let c = 0; c < cols.length; c++) {
+      if (cols[c].at(-1).e <= ev.s) { cols[c].push(ev); ev._c = c; placed = true; break; }
+    }
+    if (!placed) { ev._c = cols.length; cols.push([ev]); }
+  });
+  const n = cols.length;
+  evs.forEach(ev => { ev._lp = (ev._c / n) * 100; ev._wp = (1 / n) * 100; });
+  return evs;
+}
+
+/* ───── Build one timetable ───── */
+function buildTT(pids) {
+  const multi = pids.length > 1;
+
+  let h = '<div class="tt-header"><div class="th-cell">시간</div>';
+  DAYS.forEach(d => h += `<div class="th-cell">${d}</div>`);
+  h += '</div><div class="tt-body"><div class="time-col">';
+  for (let i = START_H; i < END_H; i++) h += `<div class="time-label">${i}:00</div>`;
+  h += '</div>';
+
+  for (let day = 0; day < 5; day++) {
+    const dayEvs = events.filter(ev => ev.day === day && pids.includes(ev.pid)).map(ev => ({...ev}));
+    const laid   = layout(dayEvs);
+
+    let lines = '';
+    for (let i = 0; i < TOTAL_H; i++) {
+      lines += `<div class="h-line"  style="top:${i * HOUR_H}px"></div>`;
+      lines += `<div class="hh-line" style="top:${i * HOUR_H + 40}px"></div>`;
+    }
+
+    const blocks = laid.map(ev => {
+      const p   = person(ev.pid);
+      const top = (ev.s - START_H) * HOUR_H + 2;
+      const ht  = (ev.e - ev.s)   * HOUR_H - 4;
+      const l   = (ev._lp + 0.4).toFixed(1);
+      const w   = (ev._wp - 0.8).toFixed(1);
+      return `<div class="ev-block"
+        style="top:${top}px;height:${ht}px;left:${l}%;width:${w}%;background:${p.color};"
+        onclick="openEventModal(${ev.id});event.stopPropagation();">
+        <div class="ev-subject">${ev.sub}</div>
+        ${multi ? `<div class="ev-person">${p.name}</div>` : ''}
+        <div class="ev-time">${fmt(ev.s)} – ${fmt(ev.e)}</div>
+      </div>`;
+    }).join('');
+
+    h += `<div class="day-col" style="height:${TOTAL_H * HOUR_H}px"
+            onclick="dayClick(event,${day})">${lines}${blocks}</div>`;
+  }
+  return h + '</div>';
+}
+
+/* ───── Render ───── */
+function renderSidebar() {
+  document.getElementById('person-list').innerHTML = people.map(p => `
+    <div class="person-item ${p.active ? '' : 'inactive'}">
+      <div class="person-toggle" onclick="togglePerson(${p.id})">
+        <div class="person-dot" style="background:${p.color}"></div>
+        <span class="person-name">${p.name}</span>
+        <span class="person-check">✓</span>
+      </div>
+      <div class="person-actions">
+        <button class="mini-btn" onclick="openPersonModal(${p.id})" title="편집">✏️</button>
+        <button class="mini-btn del" onclick="deletePerson(${p.id})" title="삭제">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function render() {
+  const active = people.filter(p => p.active);
+  const main   = document.getElementById('main');
+
+  if (mode === 'overlay') {
+    main.className = 'timetable-card';
+    main.innerHTML = active.length
+      ? buildTT(active.map(p => p.id))
+      : '<div class="empty-msg">구성원을 선택해 주세요.</div>';
+  } else {
+    main.className = 'individual-grid';
+    if (!active.length) {
+      main.innerHTML = '<div class="timetable-card"><div class="empty-msg">구성원을 선택해 주세요.</div></div>';
+      return;
+    }
+    main.innerHTML = active.map(p => `
+      <div class="individual-card">
+        <div class="individual-header">
+          <div class="individual-dot" style="background:${p.color}"></div>
+          <span class="individual-name">${p.name}</span>
+        </div>
+        ${buildTT([p.id])}
+      </div>
+    `).join('');
+  }
+}
+
+/* ───── Mode / Toggle ───── */
+function setMode(m, btn) {
+  mode = m;
+  document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function togglePerson(id) { person(id).active = !person(id).active; renderSidebar(); render(); }
+
+function toggleAll() {
+  const allOn = people.every(p => p.active);
+  people.forEach(p => p.active = !allOn);
+  renderSidebar(); render();
+}
+
+/* ───── Click empty slot → add event ───── */
+function dayClick(e, day) {
+  const rect  = e.currentTarget.getBoundingClientRect();
+  const raw   = START_H + (e.clientY - rect.top) / HOUR_H;
+  const snapped = Math.min(Math.max(Math.round(raw * 2) / 2, START_H), END_H - 0.5);
+  openEventModal(null, { day, s: snapped });
+}
+
+/* ───── Person Modal ───── */
+function openPersonModal(id) {
+  const p   = id ? person(id) : null;
+  const sel = p ? p.color : COLORS[0];
+  document.getElementById('m-title').textContent = p ? '구성원 편집' : '구성원 추가';
+  document.getElementById('m-body').innerHTML = `
+    <div class="form-group">
+      <label class="form-label">이름</label>
+      <input class="form-input" id="p-name" value="${p ? p.name : ''}" placeholder="이름을 입력하세요">
+    </div>
+    <div class="form-group">
+      <label class="form-label">색상</label>
+      <div class="palette">
+        ${COLORS.map(c => `<div class="swatch ${c===sel?'on':''}" style="background:${c}" data-c="${c}" onclick="pickColor(this)"></div>`).join('')}
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel" onclick="closeModal()">취소</button>
+      <button class="btn btn-save" onclick="savePerson(${id??'null'})">저장</button>
+    </div>`;
+  showModal();
+  document.getElementById('p-name').focus();
+}
+
+function pickColor(el) {
+  document.querySelectorAll('.swatch').forEach(s => s.classList.remove('on'));
+  el.classList.add('on');
+}
+
+function savePerson(id) {
+  const name  = document.getElementById('p-name').value.trim();
+  const color = document.querySelector('.swatch.on')?.dataset.c || COLORS[0];
+  if (!name) { document.getElementById('p-name').focus(); return; }
+  if (id) { const p = person(id); p.name = name; p.color = color; }
+  else    { people.push({ id: pid++, name, color, active: true }); }
+  closeModal(); renderSidebar(); render();
+}
+
+function deletePerson(id) {
+  const p = person(id);
+  const cnt = events.filter(e => e.pid === id).length;
+  const msg = cnt
+    ? `'${p.name}'을(를) 삭제하면 항목 ${cnt}개도 함께 삭제됩니다. 계속할까요?`
+    : `'${p.name}'을(를) 삭제하시겠습니까?`;
+  if (!confirm(msg)) return;
+  events = events.filter(e => e.pid !== id);
+  people = people.filter(p => p.id !== id);
+  renderSidebar(); render();
+}
+
+/* ───── Event Modal ───── */
+function openEventModal(id, pre = {}) {
+  if (!people.length) { alert('먼저 구성원을 추가해 주세요.'); return; }
+  const ev  = id ? evById(id) : null;
+  const day = ev ? ev.day : (pre.day ?? 0);
+  const s   = ev ? ev.s   : (pre.s   ?? START_H);
+  const e   = ev ? ev.e   : Math.min(s + 1, END_H);
+  const ppid= ev ? ev.pid : people[0].id;
+
+  document.getElementById('m-title').textContent = ev ? '항목 편집' : '항목 추가';
+  document.getElementById('m-body').innerHTML = `
+    <div class="form-group">
+      <label class="form-label">항목명</label>
+      <input class="form-input" id="ev-sub" value="${ev ? ev.sub : ''}" placeholder="항목명을 입력하세요">
+    </div>
+    <div class="form-group">
+      <label class="form-label">구성원</label>
+      <select class="form-input form-select" id="ev-pid">
+        ${people.map(p => `<option value="${p.id}"${p.id===ppid?' selected':''}>${p.name}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">요일</label>
+      <div class="day-chips">
+        ${DAYS.map((d,i) => `<div class="day-chip${i===day?' on':''}" onclick="pickDay(this,${i})">${d}</div>`).join('')}
+      </div>
+      <input type="hidden" id="ev-day" value="${day}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">시간</label>
+      <div class="time-row">
+        <select class="form-input form-select" id="ev-s" onchange="syncEnd()">${timeOpts(START_H, END_H - 0.5, s)}</select>
+        <div class="time-sep">→</div>
+        <select class="form-input form-select" id="ev-e">${timeOpts(START_H + 0.5, END_H, e)}</select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      ${ev ? `<button class="btn btn-del" onclick="deleteEvent(${id})">삭제</button>` : ''}
+      <button class="btn btn-cancel" onclick="closeModal()">취소</button>
+      <button class="btn btn-save" onclick="saveEvent(${id??'null'})">저장</button>
+    </div>`;
+  showModal();
+  document.getElementById('ev-sub').focus();
+}
+
+function pickDay(el, i) {
+  document.querySelectorAll('.day-chip').forEach(c => c.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('ev-day').value = i;
+}
+
+function syncEnd() {
+  const sv = parseFloat(document.getElementById('ev-s').value);
+  const es = document.getElementById('ev-e');
+  if (parseFloat(es.value) <= sv) es.value = Math.min(sv + 1, END_H);
+}
+
+function saveEvent(id) {
+  const sub  = document.getElementById('ev-sub').value.trim();
+  const ppid = parseInt(document.getElementById('ev-pid').value);
+  const day  = parseInt(document.getElementById('ev-day').value);
+  const s    = parseFloat(document.getElementById('ev-s').value);
+  const e    = parseFloat(document.getElementById('ev-e').value);
+  if (!sub) { document.getElementById('ev-sub').focus(); return; }
+  if (e <= s) { alert('종료 시간이 시작 시간보다 늦어야 합니다.'); return; }
+  if (id) { Object.assign(evById(id), { sub, pid: ppid, day, s, e }); }
+  else    { events.push({ id: eid++, pid: ppid, day, s, e, sub }); }
+  closeModal(); render();
+}
+
+function deleteEvent(id) {
+  if (!confirm('이 항목을 삭제하시겠습니까?')) return;
+  events = events.filter(e => e.id !== id);
+  closeModal(); render();
+}
+
+/* ───── Modal helpers ───── */
+function showModal()         { document.getElementById('overlay').classList.remove('hidden'); }
+function closeModal()        { document.getElementById('overlay').classList.add('hidden'); }
+function onOverlayClick(e)   { if (e.target === document.getElementById('overlay')) closeModal(); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+/* ───── Init ───── */
+renderSidebar();
+render();
+</script>
+</body>
+</html>
