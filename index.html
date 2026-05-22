@@ -24,6 +24,13 @@
       transition: background 0.2s; white-space: nowrap;
     }
     .btn-header:hover { background: rgba(255,255,255,0.32); }
+    .save-toast {
+      font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.9);
+      background: rgba(255,255,255,0.18); border-radius: 6px;
+      padding: 6px 12px; opacity: 0; transition: opacity 0.3s;
+      pointer-events: none; white-space: nowrap;
+    }
+    .save-toast.show { opacity: 1; }
     .view-toggle { display: flex; background: rgba(255,255,255,0.2); border-radius: 8px; padding: 4px; gap: 4px; }
     .view-btn { padding: 7px 16px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; background: transparent; color: rgba(255,255,255,0.75); transition: all 0.2s; }
     .view-btn.active { background: white; color: #667eea; }
@@ -142,7 +149,9 @@
 <header>
   <h1>📅 시간표</h1>
   <div class="header-right">
+    <span class="save-toast" id="save-toast">저장됨 ✓</span>
     <button class="btn-header" onclick="openEventModal(null)">+ 항목 추가</button>
+    <button class="btn-header" onclick="resetDB()">초기화</button>
     <div class="view-toggle">
       <button class="view-btn active" onclick="setMode('overlay', this)">겹쳐 보기</button>
       <button class="view-btn" onclick="setMode('individual', this)">개별 보기</button>
@@ -189,16 +198,13 @@ const COLORS     = [
   '#F472B6','#10B981','#F59E0B','#64748B',
 ];
 
-/* ───── Data ───── */
-let pid = 4, eid = 16;
-
-let people = [
+/* ───── Default data (초기값) ───── */
+const DEFAULT_PEOPLE = [
   { id:1, name:'홍길동', color:'#FF6B6B', active:true },
   { id:2, name:'김철수', color:'#3ECFCF', active:true },
   { id:3, name:'이영희', color:'#A78BFA', active:true },
 ];
-
-let events = [
+const DEFAULT_EVENTS = [
   { id:1,  pid:1, day:0, s:9,  e:11, sub:'수학개론'   },
   { id:2,  pid:1, day:1, s:13, e:15, sub:'영어회화'   },
   { id:3,  pid:1, day:2, s:9,  e:11, sub:'물리학'     },
@@ -215,6 +221,44 @@ let events = [
   { id:14, pid:3, day:3, s:10, e:12, sub:'화학'       },
   { id:15, pid:3, day:4, s:9,  e:11, sub:'영어회화'   },
 ];
+
+/* ───── DB (localStorage) ───── */
+const DB_KEY = 'timetable_v1';
+
+function saveDB() {
+  localStorage.setItem(DB_KEY, JSON.stringify({ pid, eid, people, events }));
+  const toast = document.getElementById('save-toast');
+  toast.classList.add('show');
+  clearTimeout(saveDB._t);
+  saveDB._t = setTimeout(() => toast.classList.remove('show'), 1800);
+}
+
+function loadDB() {
+  const raw = localStorage.getItem(DB_KEY);
+  if (!raw) return false;
+  try {
+    const db = JSON.parse(raw);
+    pid    = db.pid;
+    eid    = db.eid;
+    people = db.people;
+    events = db.events;
+    return true;
+  } catch { return false; }
+}
+
+function resetDB() {
+  if (!confirm('모든 데이터를 초기 샘플로 되돌릴까요?')) return;
+  localStorage.removeItem(DB_KEY);
+  pid = 4; eid = 16;
+  people = JSON.parse(JSON.stringify(DEFAULT_PEOPLE));
+  events = JSON.parse(JSON.stringify(DEFAULT_EVENTS));
+  renderSidebar(); render();
+}
+
+/* ───── Data ───── */
+let pid = 4, eid = 16;
+let people = JSON.parse(JSON.stringify(DEFAULT_PEOPLE));
+let events = JSON.parse(JSON.stringify(DEFAULT_EVENTS));
 
 let mode = 'overlay';
 
@@ -398,7 +442,7 @@ function savePerson(id) {
   if (!name) { document.getElementById('p-name').focus(); return; }
   if (id) { const p = person(id); p.name = name; p.color = color; }
   else    { people.push({ id: pid++, name, color, active: true }); }
-  closeModal(); renderSidebar(); render();
+  saveDB(); closeModal(); renderSidebar(); render();
 }
 
 function deletePerson(id) {
@@ -410,7 +454,7 @@ function deletePerson(id) {
   if (!confirm(msg)) return;
   events = events.filter(e => e.pid !== id);
   people = people.filter(p => p.id !== id);
-  renderSidebar(); render();
+  saveDB(); renderSidebar(); render();
 }
 
 /* ───── Event Modal ───── */
@@ -480,13 +524,13 @@ function saveEvent(id) {
   if (e <= s) { alert('종료 시간이 시작 시간보다 늦어야 합니다.'); return; }
   if (id) { Object.assign(evById(id), { sub, pid: ppid, day, s, e }); }
   else    { events.push({ id: eid++, pid: ppid, day, s, e, sub }); }
-  closeModal(); render();
+  saveDB(); closeModal(); render();
 }
 
 function deleteEvent(id) {
   if (!confirm('이 항목을 삭제하시겠습니까?')) return;
   events = events.filter(e => e.id !== id);
-  closeModal(); render();
+  saveDB(); closeModal(); render();
 }
 
 /* ───── Modal helpers ───── */
@@ -496,6 +540,7 @@ function onOverlayClick(e)   { if (e.target === document.getElementById('overlay
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
 /* ───── Init ───── */
+loadDB();
 renderSidebar();
 render();
 </script>
