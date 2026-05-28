@@ -207,9 +207,10 @@
       .timetable-card { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; }
       .tt-header, .tt-body { min-width: 500px; }
 
-      .individual-card { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-      .individual-card .tt-header,
-      .individual-card .tt-body { min-width: 500px; }
+      .tt-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+      .tt-scroll::-webkit-scrollbar { display: none; }
+      .tt-scroll .tt-header,
+      .tt-scroll .tt-body { min-width: 500px; }
 
       .modal { width: 96vw; padding: 20px 16px; border-radius: 14px; }
       .day-chips { gap: 4px; }
@@ -463,7 +464,7 @@ function render() {
           <div class="individual-dot" style="background:${p.color}"></div>
           <span class="individual-name">${p.name}</span>
         </div>
-        ${buildTT([p.id])}
+        <div class="tt-scroll">${buildTT([p.id])}</div>
       </div>
     `).join('');
   }
