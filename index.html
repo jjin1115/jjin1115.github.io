@@ -190,11 +190,21 @@
     }
     .m-add:hover { background: #5568d6; }
 
+    .m-reset {
+      display: flex; align-items: center; gap: 4px;
+      padding: 7px 13px; border-radius: 20px;
+      background: #fee2e2; color: #ef4444;
+      white-space: nowrap; cursor: pointer;
+      font-size: 13px; font-weight: 600;
+      flex-shrink: 0; border: none;
+      transition: background 0.15s;
+    }
+    .m-reset:hover { background: #fecaca; }
+
     /* ── Responsive ── */
     @media (max-width: 768px) {
       .mobile-bar { display: flex; }
       .sidebar { display: none; }
-      .btn-reset { display: none; }
 
       header { padding: 13px 16px; gap: 10px; }
       header h1 { font-size: 16px; }
@@ -440,7 +450,8 @@ function renderSidebar() {
         <button class="m-chip-edit" onclick="openPersonModal(${p.id})" title="편집">✏️</button>
         <button class="m-chip-edit" onclick="deletePerson(${p.id})" title="삭제">🗑️</button>
       </div>
-    `).join('');
+    `).join('') +
+    ``;
 }
 
 function render() {
