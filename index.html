@@ -159,15 +159,26 @@
     .mobile-bar::-webkit-scrollbar { display: none; }
 
     .m-chip {
-      display: flex; align-items: center; gap: 6px;
-      padding: 7px 13px; border-radius: 20px;
-      background: #f0f2f5; color: #666;
-      white-space: nowrap; cursor: pointer;
-      font-size: 13px; font-weight: 600;
-      flex-shrink: 0; border: none;
+      display: flex; align-items: center;
+      border-radius: 20px; background: #f0f2f5;
+      white-space: nowrap; font-size: 13px; font-weight: 600;
+      flex-shrink: 0; border: none; overflow: hidden;
       transition: all 0.15s;
     }
     .m-chip.on { color: white; }
+    .m-chip-toggle {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 10px 7px 13px; cursor: pointer;
+      background: none; border: none; color: inherit;
+      font-size: inherit; font-weight: inherit;
+    }
+    .m-chip-edit {
+      display: flex; align-items: center; justify-content: center;
+      padding: 7px 9px 7px 4px; cursor: pointer;
+      background: none; border: none; font-size: 12px;
+      opacity: 0.7; transition: opacity 0.15s;
+    }
+    .m-chip-edit:hover { opacity: 1; }
     .m-chip-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
 
     .m-add {
@@ -268,24 +279,18 @@ const COLORS     = [
 const DEFAULT_PEOPLE = [
   { id:1, name:'홍길동', color:'#FF6B6B', active:true },
   { id:2, name:'김철수', color:'#3ECFCF', active:true },
-  { id:3, name:'이영희', color:'#A78BFA', active:true },
 ];
 const DEFAULT_EVENTS = [
-  { id:1,  pid:1, day:0, s:9,  e:11, sub:'수학개론'   },
-  { id:2,  pid:1, day:1, s:13, e:15, sub:'영어회화'   },
-  { id:3,  pid:1, day:2, s:9,  e:11, sub:'물리학'     },
-  { id:4,  pid:1, day:3, s:14, e:16, sub:'컴퓨터과학' },
-  { id:5,  pid:1, day:4, s:10, e:12, sub:'화학'       },
-  { id:6,  pid:2, day:0, s:9,  e:11, sub:'수학개론'   },
-  { id:7,  pid:2, day:1, s:10, e:12, sub:'역사'       },
-  { id:8,  pid:2, day:2, s:13, e:15, sub:'영어회화'   },
-  { id:9,  pid:2, day:3, s:9,  e:11, sub:'생물학'     },
-  { id:10, pid:2, day:4, s:13, e:15, sub:'컴퓨터과학' },
-  { id:11, pid:3, day:0, s:13, e:15, sub:'국어문학'   },
-  { id:12, pid:3, day:1, s:9,  e:11, sub:'수학개론'   },
-  { id:13, pid:3, day:2, s:9,  e:11, sub:'물리학'     },
-  { id:14, pid:3, day:3, s:10, e:12, sub:'화학'       },
-  { id:15, pid:3, day:4, s:9,  e:11, sub:'영어회화'   },
+  { id:1, pid:1, day:0, s:9,  e:11, sub:'수학개론'   },
+  { id:2, pid:1, day:1, s:13, e:15, sub:'영어회화'   },
+  { id:3, pid:1, day:2, s:9,  e:11, sub:'물리학'     },
+  { id:4, pid:1, day:3, s:14, e:16, sub:'컴퓨터과학' },
+  { id:5, pid:1, day:4, s:10, e:12, sub:'화학'       },
+  { id:6, pid:2, day:0, s:9,  e:11, sub:'수학개론'   },
+  { id:7, pid:2, day:1, s:10, e:12, sub:'역사'       },
+  { id:8, pid:2, day:2, s:13, e:15, sub:'영어회화'   },
+  { id:9, pid:2, day:3, s:9,  e:11, sub:'생물학'     },
+  { id:10,pid:2, day:4, s:13, e:15, sub:'컴퓨터과학' },
 ];
 
 /* ───── DB (localStorage) ───── */
@@ -315,14 +320,14 @@ function loadDB() {
 function resetDB() {
   if (!confirm('모든 데이터를 초기 샘플로 되돌릴까요?')) return;
   localStorage.removeItem(DB_KEY);
-  pid = 4; eid = 16;
+  pid = 3; eid = 11;
   people = JSON.parse(JSON.stringify(DEFAULT_PEOPLE));
   events = JSON.parse(JSON.stringify(DEFAULT_EVENTS));
   renderSidebar(); render();
 }
 
 /* ───── Data ───── */
-let pid = 4, eid = 16;
+let pid = 3, eid = 11;
 let people = JSON.parse(JSON.stringify(DEFAULT_PEOPLE));
 let events = JSON.parse(JSON.stringify(DEFAULT_EVENTS));
 
@@ -424,13 +429,16 @@ function renderSidebar() {
   document.getElementById('mobile-bar').innerHTML =
     `<button class="m-add" onclick="openPersonModal(null)" title="구성원 추가">+</button>` +
     people.map(p => `
-      <button class="m-chip ${p.active ? 'on' : ''}"
-              style="${p.active ? `background:${p.color}` : ''}"
-              onclick="togglePerson(${p.id})">
-        <span class="m-chip-dot"
-              style="background:${p.active ? 'rgba(255,255,255,0.65)' : p.color}"></span>
-        ${p.name}
-      </button>
+      <div class="m-chip ${p.active ? 'on' : ''}"
+           style="${p.active ? `background:${p.color}` : ''}">
+        <button class="m-chip-toggle" onclick="togglePerson(${p.id})">
+          <span class="m-chip-dot"
+                style="background:${p.active ? 'rgba(255,255,255,0.65)' : p.color}"></span>
+          ${p.name}
+        </button>
+        <button class="m-chip-edit" onclick="openPersonModal(${p.id})" title="편집">✏️</button>
+        <button class="m-chip-edit" onclick="deletePerson(${p.id})" title="삭제">🗑️</button>
+      </div>
     `).join('');
 }
 
